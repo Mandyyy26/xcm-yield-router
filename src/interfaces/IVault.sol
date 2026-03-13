@@ -91,8 +91,8 @@ interface IVault {
     function convertToAssets(uint256 shares) external view returns (uint256);
 
     /// @notice Current vault state
-    function vaultState() external view returns (VaultState);
+    function getVaultState() external view returns (VaultState);
 
     /// @notice Currently active strategy ID
-    function activeStrategyId() external view returns (uint8);
+    function getActiveStrategyId() external view returns (uint8);
 }
