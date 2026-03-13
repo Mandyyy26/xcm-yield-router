@@ -2,18 +2,19 @@
 pragma solidity ^0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
-import {HelloHub} from "../src/HelloHub.sol";
+import {XCMProbe} from "../src/XCMProbe.sol";
 
 contract Deploy is Script {
-    function run() public {
+    function run() external {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
-        HelloHub hello = new HelloHub("Hello, World!");
+        XCMProbe probe = new XCMProbe();
+
         vm.stopBroadcast();
 
-        console.log("HelloHub deployed at:", address(hello));
-        console.log("Deployer:", vm.addr(deployerKey));
+        console.log("XCMProbe deployed at:", address(probe));
+        console.log("XCM Precompile address:", probe.getPrecompileAddress());
         console.log("Chain ID:", block.chainid);
     }
 }
