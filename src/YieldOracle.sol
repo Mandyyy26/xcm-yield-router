@@ -14,10 +14,20 @@ contract YieldOracle is IYieldOracle, Ownable {
     // ── Config ─────────────────────────────────────────────────
     uint256 public maxStaleness = 1 days;
     uint256 public maxDeltaBps  = 500;   // max 5% change per update
+    
 
     // ── State ──────────────────────────────────────────────────
     mapping(uint8 => uint256) private _yields;
     mapping(uint8 => uint256) private _lastUpdated;
+    mapping(address => bool) public authorizedUpdaters;
+
+
+    // ── Modifier ──────────────────────────────────────────────────
+    modifier onlyAuthorized() {
+    if (msg.sender != owner() && !authorizedUpdaters[msg.sender])
+        revert UnauthorizedCaller(msg.sender);
+    _;
+}
 
     // ── Constructor ────────────────────────────────────────────
     constructor(address initialOwner) Ownable(initialOwner) {}
@@ -25,7 +35,7 @@ contract YieldOracle is IYieldOracle, Ownable {
     // ── Admin Functions ────────────────────────────────────────
 
     /// @inheritdoc IYieldOracle
-    function updateYield(uint8 strategyId, uint256 newYield) external onlyOwner {
+    function updateYield(uint8 strategyId, uint256 newYield) external onlyAuthorized {
         if (newYield > MAX_REASONABLE_APY) revert YieldTooHigh(newYield, MAX_REASONABLE_APY);
 
         uint256 current = _yields[strategyId];
@@ -56,6 +66,10 @@ contract YieldOracle is IYieldOracle, Ownable {
     function setMaxDelta(uint256 newMaxDelta) external onlyOwner {
         emit MaxDeltaUpdated(maxDeltaBps, newMaxDelta);
         maxDeltaBps = newMaxDelta;
+    }
+
+    function setAuthorizedUpdater(address updater, bool authorized) external onlyOwner{
+        authorizedUpdaters[updater] = authorized;
     }
 
     // ── View Functions ─────────────────────────────────────────

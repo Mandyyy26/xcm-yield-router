@@ -24,6 +24,7 @@ contract XCMDispatcher is IXCMDispatcher, Ownable, ReentrancyGuard {
     // ── State ──────────────────────────────────────────────────
     uint256 public lastDispatchTime;
     mapping(uint32 => DispatchResult) private _lastDispatch;
+    bool public dispatchPaused;
 
     // ── Constructor ────────────────────────────────────────────
     constructor(address initialOwner, address _vault) Ownable(initialOwner) {
@@ -42,6 +43,11 @@ contract XCMDispatcher is IXCMDispatcher, Ownable, ReentrancyGuard {
             revert DispatchCooldownActive(lastDispatchTime + cooldown);
         _;
     }
+
+    modifier whenDispatchNotPaused() {
+    if (dispatchPaused) revert DispatchPaused();
+    _;
+}
 
     // ── Core Functions ─────────────────────────────────────────
 
@@ -72,6 +78,7 @@ contract XCMDispatcher is IXCMDispatcher, Ownable, ReentrancyGuard {
         onlyVault
         nonReentrant
         checkCooldown
+        whenDispatchNotPaused
         returns (DispatchResult memory result)
     {
         if (amount == 0) revert ZeroAmount();
@@ -160,6 +167,16 @@ contract XCMDispatcher is IXCMDispatcher, Ownable, ReentrancyGuard {
     /// @notice Update vault address
     function setVault(address newVault) external onlyOwner {
         vault = newVault;
+    }
+
+    ///@notice pause Dispatch
+    function pauseDispatch() external onlyOwner {
+        dispatchPaused = true;
+    }
+
+    ///@notice unpause Dispatch
+    function unpauseDispatch() external onlyOwner {
+        dispatchPaused = false;
     }
 
     // ── View Functions ─────────────────────────────────────────

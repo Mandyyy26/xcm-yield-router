@@ -26,6 +26,10 @@ contract HubVault is IVault, ERC20, Ownable, ReentrancyGuard, Pausable {
     uint8           public activeStrategyId;
     uint256         public totalDeposited;
 
+    uint256 public rebalanceNonce;
+    uint256 public lastRebalanceTime;
+    uint256 public rebalanceCooldown = 1 hours;
+
     // ── Constructor ────────────────────────────────────────────
     constructor(
         address _asset,
@@ -103,42 +107,55 @@ contract HubVault is IVault, ERC20, Ownable, ReentrancyGuard, Pausable {
 
     /// @inheritdoc IVault
     function rebalance()
-        external
-        override
-        onlyOwner
-        nonReentrant
-        whenNotPaused
-        onlyIdle
-    {
-        uint8 bestStrategyId = strategyManager.getBestStrategy();
+    external
+    override
+    onlyOwner
+    nonReentrant
+    whenNotPaused
+    onlyIdle
+{
+    // Cooldown guard
+    if (block.timestamp < lastRebalanceTime + rebalanceCooldown)
+        revert RebalanceCooldownActive(lastRebalanceTime + rebalanceCooldown);
 
-        if (bestStrategyId == activeStrategyId)
-            revert RebalanceNotNeeded(activeStrategyId);
+    uint8 bestStrategyId = strategyManager.getBestStrategy();
 
-        uint256 amount = totalAssets();
-        if (amount == 0) revert ZeroTotalAssets();
+    if (bestStrategyId == activeStrategyId)
+        revert RebalanceNotNeeded(activeStrategyId);
 
-        // Get destination from strategy manager
-        IStrategy.Strategy memory strategy = strategyManager.getStrategy(bestStrategyId);
+    uint256 amount = totalAssets();
+    if (amount == 0) revert ZeroTotalAssets();
 
-        uint8 oldStrategyId = activeStrategyId;
+    IStrategy.Strategy memory strategy = strategyManager.getStrategy(bestStrategyId);
 
-        // Update state BEFORE external call (CEI)
-        _changeState(VaultState.Idle, VaultState.OutboundPending);
-        activeStrategyId = bestStrategyId;
+    uint8 oldStrategyId = activeStrategyId;
 
-        // Approve dispatcher to spend tokens
-        asset.forceApprove(address(xcmDispatcher), amount);
+    // Update ALL state BEFORE external calls (CEI pattern)
+    rebalanceNonce++;
+    lastRebalanceTime = block.timestamp;
+    activeStrategyId  = bestStrategyId;
+    _changeState(VaultState.Idle, VaultState.OutboundPending);
 
-        // Dispatch XCM
-        xcmDispatcher.sendToParachain(
-            strategy.parachainId,
-            strategy.strategyAddress,
-            amount
-        );
+    // Approve exact amount only (not unlimited)
+    asset.forceApprove(address(xcmDispatcher), amount);
 
-        emit Rebalanced(oldStrategyId, bestStrategyId, amount);
-    }
+    // External call last
+    xcmDispatcher.sendToParachain(
+        strategy.parachainId,
+        strategy.strategyAddress,
+        amount
+    );
+
+    // Revoke approval after use
+    asset.forceApprove(address(xcmDispatcher), 0);
+
+    emit Rebalanced(oldStrategyId, bestStrategyId, amount);
+}
+
+
+    function setRebalanceCooldown(uint256 newCooldown) external onlyOwner {
+    rebalanceCooldown = newCooldown;
+}
 
     /// @inheritdoc IVault
     function emergencyPause() external override onlyOwner {

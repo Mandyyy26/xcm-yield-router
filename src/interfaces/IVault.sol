@@ -48,6 +48,7 @@ interface IVault {
     error RebalanceNotNeeded(uint8 currentStrategyId);
     error VaultPaused();
     error ZeroTotalAssets();
+    error RebalanceCooldownActive(uint256 nextAllowed);
 
     // ═══════════════════════════════════════════════════════════
     //  USER FUNCTIONS

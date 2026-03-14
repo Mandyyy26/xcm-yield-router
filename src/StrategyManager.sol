@@ -14,6 +14,7 @@ contract StrategyManager is IStrategy, Ownable {
     uint8[] private _strategyIds;
     IYieldOracle public oracle;
 
+
     // ── Constructor ────────────────────────────────────────────
     constructor(address initialOwner, address _oracle) Ownable(initialOwner) {
         oracle = IYieldOracle(_oracle);

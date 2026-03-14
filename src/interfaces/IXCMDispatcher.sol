@@ -64,6 +64,7 @@ interface IXCMDispatcher {
     error UnauthorizedCaller(address caller);
     error ZeroAmount();
     error EncodingFailed();
+    error DispatchPaused();
 
     // ═══════════════════════════════════════════════════════════
     //  CORE FUNCTIONS
