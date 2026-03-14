@@ -109,7 +109,7 @@ contract SecurityTest is Test {
 
     // ── Reentrancy Guards ──────────────────────────────────────
 
-    function test_security_reentrantDeposit_blocked() public {
+    function test_security_reentrantDeposit_blocked() pure public {
         // ReentrancyGuard prevents reentrancy — test that guard is in place
         // by confirming nonReentrant modifier is applied (compile-time verified)
         // Runtime: any reentrant call to deposit would revert with ReentrancyGuardReentrantCall
