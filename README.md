@@ -1,66 +1,72 @@
-## Foundry
+# XCM Yield Router 🔀
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+> Cross-chain yield optimizer built on Polkadot Hub (PVM track)  
+> Deposit once. Vault routes funds to highest-yield parachain via XCM automatically.
 
-Foundry consists of:
+## Live Contracts (Polkadot Hub TestNet)
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+| Contract        | Address                                      |
+| --------------- | -------------------------------------------- |
+| HubVault        | `0x305C5085610EaeeC2AD66Ad32c46967786aA4e1A` |
+| XCMDispatcher   | `0x0737c24991D283990477F6Ea20Df7bBfffEb9CAc` |
+| StrategyManager | `0x373D7ad973B2942BF4E6feb460F400155cE8883F` |
+| MockToken (MTK) | `0x4E8B88C443e2F60F869bd0b8321C716422711e3a` |
 
-## Documentation
+## How It Works
 
-https://book.getfoundry.sh/
+1. User deposits MTK tokens into HubVault
+2. StrategyManager tracks APY across parachains via oracle
+3. When Para B APY > Para A APY, keeper calls `rebalance()`
+4. HubVault → XCMDispatcher → XCM Precompile (`0xA0000`)
+5. `weighMessage()` estimates gas cost → `execute()` dispatches cross-chain
 
-## Usage
+## XCM Precompile Integration
 
-### Build
+The core innovation: Solidity contract calling Polkadot's native XCM precompile.
 
-```shell
-$ forge build
+```solidity
+// weighMessage() → get cost estimate
+IXcm.Weight memory weight = XCM.weighMessage(message);
+
+// execute() → dispatch cross-chain transfer
+XCM.execute(message, weight);
 ```
 
-### Test
+## Verified XCM Weights (Polkadot Hub TestNet)
 
-```shell
-$ forge test
+| Metric      | Value       |
+| ----------- | ----------- |
+| `refTime`   | 979,880,000 |
+| `proofSize` | 10,943      |
+
+---
+
+## Run Locally
+
+```bash
+git clone <your-repo>
+cd xcm-yield-router
+npm install
+
+# Copy and fill environment variables
+cp .env.example .env
+# Add your PRIVATE_KEY and RPC_URL to .env
+
+# Deploy contracts
+forge run scripts/deploy.ts --network polkadotHubTestnet
+
+# Start frontend
+cd frontend
+npm install
+npm run dev
 ```
 
-### Format
+## Tech Stack
 
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+| Layer           | Technology                                   |
+| --------------- | -------------------------------------------- |
+| Smart Contracts | Solidity ^0.8.28 + OpenZeppelin              |
+| XCM Integration | Polkadot XCM Precompile at `0xA0000`         |
+| Deployment      | Foundry                                      |
+| Frontend        | React + Viem + Wagmi                         |
+| Network         | Polkadot Hub TestNet (Chain ID: `420420417`) |

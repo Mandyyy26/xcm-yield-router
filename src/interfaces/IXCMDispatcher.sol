@@ -103,6 +103,8 @@ interface IXCMDispatcher {
     /// @notice Update cooldown period between dispatches
     function setCooldown(uint256 newCooldown) external;
 
+    function setVault(address newVault) external;
+
     // ═══════════════════════════════════════════════════════════
     //  VIEW FUNCTIONS
     // ═══════════════════════════════════════════════════════════
